@@ -12,6 +12,8 @@
 #include <QSqlError>
 #include <QCryptographicHash>
 #include <QMutex>
+#include <openssl/ecdsa.h>
+
 
 // 全局互斥锁，用于同步数据库访问
 QMutex databaseMutex;
@@ -270,6 +272,11 @@ void processDataAndForward(QDataStream& inStream,QUdpSocket& udpSocket, Client* 
             continue;
         }
         //qDebug() << "send message";
+        if(euclideanDistance(clients[i].x,clients[i].y,
+                             clients[my_index].x,clients[my_index].y) > 2.0)//不是
+        {
+            continue;
+        }
         udpSocket.writeDatagram(byteArray, clients[i].address, clients[i].port);
         query.bindValue(":port", clients[i].port);
         query.bindValue(":message",receivedMessage.buffer);
@@ -560,7 +567,7 @@ void gongshi(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_ind
     {
         QDataStream empty;
         //qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-        (empty,udpSocket,clients,clientCount,my_index,port,db);
+        //(empty,udpSocket,clients,clientCount,my_index,port,db);
     }
     }
 
@@ -642,7 +649,7 @@ void sendData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_in
 
 }
 //修改
-void checkAndUpdateTrustValue(QSqlDatabase& db, Client* clients ,int clientCount,int my_index, int port) {
+void checkAndUpdateTrustValue(QSqlDatabase& db, Client* clients ,int clientCount,int my_index, int port) {//监测周边节点行为
     //qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
     QString infoTableName = QString("info_%1").arg(port);
     QString portOutputTableName = QString("output_%1").arg(port);
@@ -671,6 +678,7 @@ void checkAndUpdateTrustValue(QSqlDatabase& db, Client* clients ,int clientCount
                 ff =1;
             }
         }
+
         if(ff)
         {
             continue;
@@ -1073,6 +1081,8 @@ void createOrClearTableForPort(QSqlDatabase& db,int port) {//num几个
 }
 
 int main(int argc, char *argv[]) {
+
+
     QCoreApplication a(argc, argv);
 
     // 创建UDP socket
@@ -1095,6 +1105,7 @@ int main(int argc, char *argv[]) {
             //qDebug() << "Database opened successfully!";
         }
     createBlockChainTable(db,port);//设置创世块
+
         // Create QSqlQuery instance
         QSqlQuery query(db);
 
@@ -1151,11 +1162,11 @@ int main(int argc, char *argv[]) {
 
     // 创建定时器 发送业务数据，数据格式定义  ，此处广播
     QTimer sendTimer_transactions;
-    sendTimer_transactions.setInterval(5000); // 4秒发送一次数据
+    sendTimer_transactions.setInterval(5000); // 5秒发送一次数据
 
     // 创建定时器 发送共识数据，发送评估数据集，此处组播
     QTimer sendTimer_trust_estimated;
-    sendTimer_trust_estimated.setInterval(10000); // 1秒发送一次数据
+    sendTimer_trust_estimated.setInterval(10000); // 10秒发送一次数据
 
     QObject::connect(&sendTimer_transactions, &QTimer::timeout, [&]() {
             sendData(udpSocket, clients, clientCount, my_index, port,db);
