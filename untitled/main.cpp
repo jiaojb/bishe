@@ -12,7 +12,9 @@
 #include <QSqlError>
 #include <QCryptographicHash>
 #include <QMutex>
-#include <openssl/ecdsa.h>
+#include <QRegularExpression>
+#include <QStringList>
+//#include <openssl/ecdsa.h>
 
 
 // 全局互斥锁，用于同步数据库访问
@@ -403,6 +405,9 @@ void updateInfoTableFromBlockchain(int my_index,QSqlDatabase& db, Client* client
     //db.close();
 }
 
+//void turnBad(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port,QSqlDatabase& db){
+
+//}
 void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port,QSqlDatabase& db) {
     while (udpSocket.hasPendingDatagrams())
     {
@@ -425,6 +430,15 @@ void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my
         {
             processDataAndForward(inStream,udpSocket, clients, clientCount, my_index, port, db, senderPort);
 
+        }
+        else if(is_trust == 2)//为变坏信息
+        {
+           // turnBad(inStream,udpSocket, clients, clientCount, my_index, port, db, senderPort);
+
+        }
+        else if(is_trust == 3)//为更新client信息
+        {
+            qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
         }
         else//共识信息
         {
@@ -781,11 +795,8 @@ void consensusData(QUdpSocket& udpSocket, Client* clients, int clientCount, int 
     }
 }
 
-
-
-
 //创世块建立
-void createBlockChainTable(QSqlDatabase& db, int port)
+void createBlockChainTable(QSqlDatabase& db, int port,QList<int> intList)
 {
     // Open SQLite database
 
@@ -819,30 +830,20 @@ void createBlockChainTable(QSqlDatabase& db, int port)
                                       "VALUES (:id, :trust_value, :block_depth, :is_consensus_node, :is_bad_node, :x, :y)").arg(database);
         // Example data to be inserted
         query.prepare(insertQuery);
-    Point p[10];
-    p[0].x = 1;
-    p[0].y = 1;
+    Point p;
+    p.x = 1;
+    p.y = 1;
+    int clientCount =  intList.size();
 
-    p[1].x = 3;
-    p[1].y = 1;
+    for (int i = 0; i < clientCount; i++) {
 
-    p[2].x = 2;
-    p[2].y = 2;
-
-    p[3].x = 2;
-    p[3].y = 3;
-
-    p[4].x = 3;
-    p[4].y = 3;
-    int clientCount = 5;
-    for (int i = 0, host = 8080; i < clientCount; i++, host++) {
-        query.bindValue(":id", host);
+        query.bindValue(":id", intList[i]);
         query.bindValue(":trust_value", 10); // Example trust value
         query.bindValue(":block_depth", 0); // Example block depth
-        query.bindValue(":is_consensus_node", 0.0); // Example is consensus node
+        query.bindValue(":is_consensus_node", 0); // Example is consensus node
         query.bindValue(":is_bad_node", 0);
-        query.bindValue(":x", p[i].x); // X value from clients array
-        query.bindValue(":y", p[i].y); // Y value from clients array
+        query.bindValue(":x", p.x); // X value from clients array
+        query.bindValue(":y", p.y); // Y value from clients array
         databaseMutex.lock();
         query.exec();
         query.finish();
@@ -865,7 +866,7 @@ void createBlockChainTable(QSqlDatabase& db, int port)
         query.prepare(updateQuery);
 
         // 绑定值到占位符
-        query.bindValue(":id", 8082);
+        query.bindValue(":id", intList[0]);
 
         query.bindValue(":is_consensus_node", 1);
 
@@ -885,7 +886,7 @@ void createBlockChainTable(QSqlDatabase& db, int port)
         query.prepare(updateQuery);
 
         // 绑定值到占位符
-        query.bindValue(":id", 8084);
+        query.bindValue(":id", intList[1]);
 
         query.bindValue(":is_consensus_node", 1);
 
@@ -897,25 +898,25 @@ void createBlockChainTable(QSqlDatabase& db, int port)
         query.finish();
         databaseMutex.unlock();
 
-        //设置坏节点
-        updateQuery = QString("UPDATE %1 SET "
-                                  "is_bad_node = :is_bad_node WHERE id = :id").arg(database);
+//        //设置坏节点
+//        updateQuery = QString("UPDATE %1 SET "
+//                                  "is_bad_node = :is_bad_node WHERE id = :id").arg(database);
 
-            // 准备查询
-            query.prepare(updateQuery);
+//            // 准备查询
+//            query.prepare(updateQuery);
 
-            // 绑定值到占位符
-            query.bindValue(":id", 8081);
+//            // 绑定值到占位符
+//            query.bindValue(":id", 8081);
 
-            query.bindValue(":is_bad_node", 1);
+//            query.bindValue(":is_bad_node", 1);
 
-            // 执行更新
-            databaseMutex.lock();
-            if (!query.exec()) {
-                qDebug() << "错误：无法在 BlockChain 表中更新数据：" ;
-            }
-            query.finish();
-            databaseMutex.unlock();
+//            // 执行更新
+//            databaseMutex.lock();
+//            if (!query.exec()) {
+//                qDebug() << "错误：无法在 BlockChain 表中更新数据：" ;
+//            }
+//            query.finish();
+//            databaseMutex.unlock();
 
         //查寻
             if (!query.exec(QString("SELECT * FROM %1").arg(database))) {
@@ -940,6 +941,165 @@ void createBlockChainTable(QSqlDatabase& db, int port)
             db.commit();
 
 }
+
+//创世块建立
+
+
+//void createBlockChainTable(QSqlDatabase& db, int port,QList<int> intList)
+//{
+//    // Open SQLite database
+
+
+//    // Create BlockChain table
+//    QSqlQuery query(db);
+//    QString database =  QString("blockchain_%1").arg(port);
+//    if (!query.exec(QString("DROP TABLE IF EXISTS %1").arg(database))) {
+//            qDebug() << "Error: Failed to drop BlockChain table:";
+//            //db.close();
+//            return;
+//        } else {
+//            // qDebug() << "BlockChain table dropped successfully!";
+//        }
+//    if (!query.exec(QString("CREATE TABLE IF NOT EXISTS %1("
+//                                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+//                                 "trust_value FLOAT, "
+//                                 "block_depth INTEGER, "
+//                                 "is_consensus_node INTEGER,"
+//                                 "is_bad_node INTEGER,"
+//                                 "x INTEGER,"
+//                                 "y INTEGER)").arg(database))) {
+//            qDebug() << "Error: Failed to create BlockChain table:";
+//            //db.close();
+//            return;
+//        } else {
+//           // qDebug() << "BlockChain table created successfully!";
+//        }
+//    // Close the database connection
+//    QString insertQuery = QString("INSERT INTO %1 (id, trust_value, block_depth, is_consensus_node, is_bad_node, x, y) "
+//                                      "VALUES (:id, :trust_value, :block_depth, :is_consensus_node, :is_bad_node, :x, :y)").arg(database);
+//        // Example data to be inserted
+//        query.prepare(insertQuery);
+//    Point p[10];
+//    p[0].x = 1;
+//    p[0].y = 1;
+
+//    p[1].x = 3;
+//    p[1].y = 1;
+
+//    p[2].x = 2;
+//    p[2].y = 2;
+
+//    p[3].x = 2;
+//    p[3].y = 3;
+
+//    p[4].x = 3;
+//    p[4].y = 3;
+//    int clientCount = 5;
+//    for (int i = 0, host = 8080; i < clientCount; i++, host++) {
+//        query.bindValue(":id", host);
+//        query.bindValue(":trust_value", 10); // Example trust value
+//        query.bindValue(":block_depth", 0); // Example block depth
+//        query.bindValue(":is_consensus_node", 0.0); // Example is consensus node
+//        query.bindValue(":is_bad_node", 0);
+//        query.bindValue(":x", p[i].x); // X value from clients array
+//        query.bindValue(":y", p[i].y); // Y value from clients array
+//        databaseMutex.lock();
+//        query.exec();
+//        query.finish();
+//        databaseMutex.unlock();
+//        // Execute the query
+////        if (!query.exec()) {
+////            qDebug() << "Error: Failed to insert data into BlockChain table:" ;
+////        } else {
+////            qDebug() << "Data inserted successfully into BlockChain table!";
+////        }
+//    }
+
+
+//       // Prepare the query
+//        //设置共识节点
+//    QString updateQuery = QString("UPDATE %1 SET "
+//                              "is_consensus_node = :is_consensus_node WHERE id = :id").arg(database);
+
+//        // 准备查询
+//        query.prepare(updateQuery);
+
+//        // 绑定值到占位符
+//        query.bindValue(":id", 8082);
+
+//        query.bindValue(":is_consensus_node", 1);
+
+//        // 执行更新
+//        databaseMutex.lock();
+//        if (!query.exec()) {
+//            qDebug() << "错误：无法在 BlockChain 表中更新数据：" ;
+//        }
+//        query.finish();
+//        databaseMutex.unlock();
+
+//        //设置共识节点
+//    updateQuery = QString("UPDATE %1 SET "
+//                              "is_consensus_node = :is_consensus_node WHERE id = :id").arg(database);
+
+//        // 准备查询
+//        query.prepare(updateQuery);
+
+//        // 绑定值到占位符
+//        query.bindValue(":id", 8084);
+
+//        query.bindValue(":is_consensus_node", 1);
+
+//        // 执行更新
+//        databaseMutex.lock();
+//        if (!query.exec()) {
+//            qDebug() << "错误：无法在 BlockChain 表中更新数据：" ;
+//        }
+//        query.finish();
+//        databaseMutex.unlock();
+
+//        //设置坏节点
+//        updateQuery = QString("UPDATE %1 SET "
+//                                  "is_bad_node = :is_bad_node WHERE id = :id").arg(database);
+
+//            // 准备查询
+//            query.prepare(updateQuery);
+
+//            // 绑定值到占位符
+//            query.bindValue(":id", 8081);
+
+//            query.bindValue(":is_bad_node", 1);
+
+//            // 执行更新
+//            databaseMutex.lock();
+//            if (!query.exec()) {
+//                qDebug() << "错误：无法在 BlockChain 表中更新数据：" ;
+//            }
+//            query.finish();
+//            databaseMutex.unlock();
+
+//        //查寻
+//            if (!query.exec(QString("SELECT * FROM %1").arg(database))) {
+//                qDebug() << "Error: Failed to fetch data from " << database << " table:" ;
+//                // db.close();
+//                return;
+//            } else {
+//                qDebug() << "Data from " << database << " table:";
+//                while (query.next()) {
+//                    int id = query.value(0).toInt();
+//                    float trust_value = query.value(1).toFloat();
+//                    int block_depth = query.value(2).toInt();
+//                    int is_consensus_node = query.value(3).toInt();
+//                    int is_bad_node = query.value(4).toInt();
+//                    int x = query.value(5).toInt();
+//                    int y = query.value(6).toInt();
+
+//                    qDebug() << "ID:" << id << ", Trust Value:" << trust_value << ", Block Depth:" << block_depth
+//                             << ", Is Consensus Node:" << is_consensus_node << ", Is BAD Node:" << is_bad_node << ", X:" << x << ", Y:" << y;
+//                }
+//            }
+//            db.commit();
+
+//}
 
 
 
@@ -1080,20 +1240,64 @@ void createOrClearTableForPort(QSqlDatabase& db,int port) {//num几个
     db.commit();
 }
 
+void update_client(QUdpSocket& udpSocket, Client* clients,int my_index,int port,int clientCount)
+{
+    Message temp;
+
+    Client xx;
+    temp.is_val = 3;
+    temp.Source_ID = xx;
+    temp.ID2 = xx;
+    temp.ID1 = xx;
+    QString str = QString::number(port); // 将整数转换为字符串
+    temp.buffer= str.toUtf8(); // 将字符串转换为 QByteArray
+
+
+    xx.x = 1;
+    xx.y = 1;
+    temp.hops=0;
+    temp.hash_result = hashByteArray(temp.buffer, QCryptographicHash::Sha256);
+    QByteArray byteArray;
+    QDataStream stream(&byteArray, QIODevice::WriteOnly);
+
+    stream <<temp.is_val<< temp.Source_ID.port
+           << temp.ID1.port
+           << temp.ID2.port<< temp.ID2.x << temp.ID2.y
+           << temp.buffer<<temp.hash_result<<temp.hops;
+    for (int i = 0; i < clientCount; i++) {
+        if (clients[i].port == port) {
+            continue;
+        }
+        if(euclideanDistance(clients[my_index].x,clients[my_index].y,clients[i].x,clients[i].y)>2)
+        {
+            continue;
+        }
+//        if (clients[i].is_run_node == 0) {
+//            continue;
+//        }
+        //qDebug() << "send message";
+        udpSocket.writeDatagram(byteArray, clients[i].address, clients[i].port);
+    }
+
+}
+
 int main(int argc, char *argv[]) {
 
 
     QCoreApplication a(argc, argv);
-
+    int control_port;
+    control_port = atoi(argv[1]);
+     qDebug() << "control_port: "<<control_port;
     // 创建UDP socket
     QUdpSocket udpSocket;
     // 绑定到本地端口
     int port;
-    qDebug() << "Enter a port: ";
-    std::cin >> port;
+    //qDebug() << "Enter a port: ";
+    //::cin >> port;
+    port= atoi(argv[2]);
     udpSocket.bind(QHostAddress::AnyIPv4, static_cast<quint16>(port));
 
-    Client clients[10];
+    Client clients[20];
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
     QString database = QString("BlockChain_%1.db").arg(port);
     db.setDatabaseName(database);
@@ -1104,7 +1308,31 @@ int main(int argc, char *argv[]) {
         } else {
             //qDebug() << "Database opened successfully!";
         }
-    createBlockChainTable(db,port);//设置创世块
+        // 从命令行参数中获取字符串
+        QString arg3 = QString(argv[3]);
+
+        // 使用正则表达式匹配所有整数部分（包括负数）
+        QRegularExpression re("-?\\d+");
+        QStringList integers;
+
+        // 迭代匹配的结果，并将整数添加到列表中
+        QRegularExpressionMatchIterator matchIter = re.globalMatch(arg3);
+        while (matchIter.hasNext()) {
+            QRegularExpressionMatch match = matchIter.next();
+            QString integer = match.captured();
+            integers.append(integer);
+        }
+
+        // 将字符串列表中的整数转换为 int 类型
+        QList<int> intList;
+        for (const QString &str : integers) {
+            intList.append(str.toInt());
+        }
+
+        // 输出转换后的整数列表
+       // qDebug() << "转换后的整数列表：" << intList;
+
+    createBlockChainTable(db,port,intList);//设置创世块
 
         // Create QSqlQuery instance
         QSqlQuery query(db);
@@ -1149,16 +1377,31 @@ int main(int argc, char *argv[]) {
                 clients[count].is_bad_node=is_bad_node;
                 clients[count].trust_value=trust_value;
                 clients[count].block_depth=block_depth;
+                clients[count].is_run_node = 0;
+                clients[count].is_out_node = 0;
                 count++;
             }
         }
-
+    clients[my_index].is_run_node = 1;
+    clients[count].x=0;
+    clients[count].y=0;
+    clients[count].is_consensus_node=0;
+    clients[count].is_bad_node=0;
+    clients[count].trust_value=0;
+    clients[count].block_depth=0;
+    clients[count].is_run_node = 1;
+    clients[count].is_out_node = 0;
+    clientCount++;
+   // update_client(udpSocket, clients, my_index,port,clientCount);
     //createOrClearTableForPort(db,port);//设置自身数据库
     qDebug() << port << "号无人机启动，监听端口" << port;
 
 
     createOrClearTableForPort(db,port);//设置自身数据库
    // changetable(db,port);
+    // 创建定时器，广播client信息  ，此处广播
+    QTimer sendTimer_clients;
+    sendTimer_clients.setInterval(5000); // 5秒发送一次数据
 
     // 创建定时器 发送业务数据，数据格式定义  ，此处广播
     QTimer sendTimer_transactions;
@@ -1211,6 +1454,10 @@ int main(int argc, char *argv[]) {
          checkAndUpdateTrustValue(db, clients, clientCount, my_index, port);
 
      });
+     QObject::connect(&sendTimer_clients, &QTimer::timeout, [&]() {
+         update_client(udpSocket, clients, my_index,port,clientCount);
+
+      });
     // 启动定时器， 考虑发数据给控制台
     sendTimer_trust_estimated.start();
 
@@ -1223,5 +1470,7 @@ int main(int argc, char *argv[]) {
     sendTimer_gongshi.start();
 
     sendTimer_Score.start();
+
+    sendTimer_clients.start();
     return a.exec();
 }

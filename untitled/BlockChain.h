@@ -8,6 +8,8 @@ struct Client {
     int block_depth;
     int is_consensus_node;
     int is_bad_node;   
+    int is_run_node;//已启动
+    int is_out_node;//已踢出
     int x;
     int y;
 };
