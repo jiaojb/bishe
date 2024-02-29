@@ -16,10 +16,10 @@ CXX           = g++
 DEFINES       = -DUNICODE -D_UNICODE -DWIN32 -DMINGW_HAS_SECURE_API=1 -DQT_DEPRECATED_WARNINGS -DQT_QML_DEBUG -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_SQL_LIB -DQT_CORE_LIB
 CFLAGS        = -fno-keep-inline-dllexport -O2 -Wall -Wextra -Wextra $(DEFINES)
 CXXFLAGS      = -fno-keep-inline-dllexport -O2 -std=gnu++11 -Wall -Wextra -Wextra -fexceptions -mthreads $(DEFINES)
-INCPATH       = -I..\untitled -I. -I"C:\Program Files\OpenSSL-Win64\include" -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtWidgets -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtGui -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtANGLE -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtNetwork -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtSql -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtCore -Irelease -I/include -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\mkspecs\win32-g++ 
+INCPATH       = -I..\untitled -I. -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtWidgets -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtGui -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtANGLE -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtNetwork -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtSql -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\include\QtCore -Irelease -I/include -IC:\Qt\Qt5.14.2\5.14.2\mingw73_64\mkspecs\win32-g++ 
 LINKER      =        g++
 LFLAGS        =        -Wl,-s -Wl,-subsystem,console -mthreads
-LIBS        =        -L"C:\Program Files\OpenSSL-Win64\lib" -llibcrypto C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Widgets.a C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Gui.a C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Network.a C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Sql.a C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Core.a   
+LIBS        =        C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Widgets.a C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Gui.a C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Network.a C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Sql.a C:\Qt\Qt5.14.2\5.14.2\mingw73_64\lib\libQt5Core.a   
 QMAKE         = C:\Qt\Qt5.14.2\5.14.2\mingw73_64\bin\qmake.exe
 DEL_FILE      = del
 CHK_DIR_EXISTS= if not exist
@@ -263,7 +263,10 @@ release/main.o: ../untitled/main.cpp C:/Qt/Qt5.14.2/5.14.2/mingw73_64/include/Qt
 		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/include/QtSql/qsqlerror.h \
 		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/include/QtCore/QCryptographicHash \
 		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/include/QtCore/qcryptographichash.h \
-		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/include/QtCore/QMutex
+		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/include/QtCore/QMutex \
+		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/include/QtCore/QRegularExpression \
+		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/include/QtCore/qregularexpression.h \
+		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/include/QtCore/QStringList
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o release\main.o ..\untitled\main.cpp
 
 release/main8080.o: ../untitled/main8080.cpp 

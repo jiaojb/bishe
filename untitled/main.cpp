@@ -69,7 +69,7 @@ void updateConsensusData(QDataStream &inStream,QUdpSocket& udpSocket, Client* cl
         if (query.next()) {
             int id = query.value(0).toInt();
             float trustValue = query.value(1).toFloat();
-            int blockDepth = query.value(2).toInt();
+          //  int blockDepth = query.value(2).toInt();
             trustValue = (trustValue+trust_value)/(2.0);
             QString updateQuery = QString("UPDATE %1 SET trust_value = :trustValue WHERE id = :id").arg(portInfoTableName);
             query.prepare(updateQuery);
@@ -107,7 +107,7 @@ void updateConsensusData(QDataStream &inStream,QUdpSocket& udpSocket, Client* cl
         while (query.next()) {
             int id = query.value(0).toInt();
             float trustValue = query.value(1).toFloat();
-            //int blockDepth = query.value(2).toInt();
+            int blockDepth = query.value(2).toInt();
 
             // 写入数据流
             stream << id << trustValue ;
@@ -115,6 +115,7 @@ void updateConsensusData(QDataStream &inStream,QUdpSocket& udpSocket, Client* cl
             updateQuery.bindValue(":trust_value", trustValue);
             //updateQuery.bindValue(":block_depth", blockDepth);
             updateQuery.bindValue(":id", id);
+            qDebug() << "共识 ID:" << id << ", 信任值:" << trustValue << ", 区块深度:" << blockDepth;
             //qDebug() <<"gengxinblock";
              databaseMutex.lock();
             if (!updateQuery.exec()) {
@@ -181,7 +182,7 @@ void updateTrustValuesFromStream(QSqlDatabase& db, const QString& portInfoTableN
             }
             query.finish();
              databaseMutex.unlock();
-            qDebug() << "ID:" << idFromDB << ", 信任值:" << updatedTrustValue << ", 区块深度:" << blockDepth;
+           // qDebug() << "ID:" << idFromDB << ", 信任值:" << updatedTrustValue << ", 区块深度:" << blockDepth;
         }
         else {
             qDebug() << "未找到 ID 为：" << receivedID << " 的记录";
@@ -293,6 +294,8 @@ void processDataAndForward(QDataStream& inStream,QUdpSocket& udpSocket, Client* 
     }
     db.commit();
 }
+
+//提出blockchain信息，更新info_和clients信息
 void tongbu( Client* clients, int& my_index, int port, QSqlDatabase& db) {
     QString blockchainTableName = QString("blockchain_%1").arg(port);
         QString infoTableName = QString("info_%1").arg(port);
@@ -343,6 +346,11 @@ void tongbu( Client* clients, int& my_index, int port, QSqlDatabase& db) {
                 clients[count].is_bad_node=is_bad_node;
                 clients[count].trust_value=trust_value;
                 clients[count].block_depth=block_depth;
+                if(trust_value<6)
+                {
+                    clients[count].is_out_node = 1;
+                    qDebug() <<"clients[count].is_out_node = 1 port ="<<clients[count].port;
+                }
                 count++;
             }
             //qDebug() << "Data updated successfully in " << infoTableName << " table!";
@@ -404,10 +412,52 @@ void updateInfoTableFromBlockchain(int my_index,QSqlDatabase& db, Client* client
     }
     //db.close();
 }
+//变坏
+void turnBad(QDataStream& inStream, Client* clients,  int my_index, quint16 senderPort){
 
-//void turnBad(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port,QSqlDatabase& db){
+    //qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
+    Message receivedMessage;
+    inStream >> receivedMessage.Source_ID.port
+            >> receivedMessage.ID1.port
+            >> receivedMessage.ID2.port>> receivedMessage.ID2.x >> receivedMessage.ID2.y
+            >> receivedMessage.buffer >> receivedMessage.hash_result>> receivedMessage.hops;
+    receivedMessage.is_val =0;
+    if(senderPort == 0)
+    {
+        return;
+    }
+    if (receivedMessage.buffer == QByteArray("8888")) {
+        // byteArray 与 "8888" 相同
+        //qDebug() << "ASDFGHJKL";
+        clients[my_index].is_bad_node = 1;
+    }
 
-//}
+}
+
+void update_exit_client(QDataStream& inStream, Client* clients, int clientCount, quint16 senderPort){
+
+    //qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
+    Message receivedMessage;
+    inStream >> receivedMessage.Source_ID.port
+            >> receivedMessage.ID1.port
+            >> receivedMessage.ID2.port>> receivedMessage.ID2.x >> receivedMessage.ID2.y
+            >> receivedMessage.buffer >> receivedMessage.hash_result>> receivedMessage.hops;
+    receivedMessage.is_val =0;
+    if(senderPort == 0)
+    {
+        return;
+    }
+    int temp_port = receivedMessage.buffer.toInt();
+    for(int i =0;i<clientCount;i++)
+    {
+        if(clients[i].port == temp_port)
+        {
+            clients[i].is_run_node = 1;
+           // qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
+        }
+    }
+
+}
 void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port,QSqlDatabase& db) {
     while (udpSocket.hasPendingDatagrams())
     {
@@ -433,12 +483,14 @@ void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my
         }
         else if(is_trust == 2)//为变坏信息
         {
-           // turnBad(inStream,udpSocket, clients, clientCount, my_index, port, db, senderPort);
+           turnBad(inStream, clients, my_index,  senderPort);
+           // qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
 
         }
         else if(is_trust == 3)//为更新client信息
         {
-            qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+           // qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+            update_exit_client(inStream, clients, clientCount,senderPort);
         }
         else//共识信息
         {
@@ -1272,10 +1324,6 @@ void update_client(QUdpSocket& udpSocket, Client* clients,int my_index,int port,
         {
             continue;
         }
-//        if (clients[i].is_run_node == 0) {
-//            continue;
-//        }
-        //qDebug() << "send message";
         udpSocket.writeDatagram(byteArray, clients[i].address, clients[i].port);
     }
 
@@ -1417,7 +1465,7 @@ int main(int argc, char *argv[]) {
 
     QTimer sendTimer_trust_consensus;
     sendTimer_trust_consensus.setInterval(7000); // 12秒发送一次数据
-
+    //提出blockchain信息，更新info_和clients信息
     QTimer sendTimer_tongbu;
     sendTimer_tongbu.setInterval(9000); // 1秒发送一次数据
 
@@ -1446,7 +1494,7 @@ int main(int argc, char *argv[]) {
      QObject::connect(&sendTimer_trust_consensus, &QTimer::timeout, [&]() {
              consensusData(udpSocket, clients, clientCount, my_index, port,db);
          });
-
+        //提出blockchain信息，更新info_和clients信息
      QObject::connect(&sendTimer_tongbu, &QTimer::timeout, [&]() {
              tongbu( clients, my_index, port,db);
          });
