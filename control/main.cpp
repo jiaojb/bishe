@@ -46,7 +46,7 @@ void sendData(QUdpSocket& udpSocket) {
            << temp.ID2.port<< temp.ID2.x << temp.ID2.y
            << temp.buffer<<temp.hash_result<<temp.hops;
 
-    udpSocket.writeDatagram(byteArray, QHostAddress("127.0.0.1"), 8080);
+    udpSocket.writeDatagram(byteArray, QHostAddress("127.0.0.1"), 8081);
 }
 int main(int argc, char *argv[])
 {
