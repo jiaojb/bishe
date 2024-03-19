@@ -16,8 +16,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         gongshi.cpp \
-        main.cpp \
-        main8080.cpp
+        main.cpp
 
 #INCLUDEPATH += $$quote(C:/Program Files/OpenSSL-Win64/include)
 #LIBS += -L$$quote(C:/Program Files/OpenSSL-Win64/lib) -llibcrypto
