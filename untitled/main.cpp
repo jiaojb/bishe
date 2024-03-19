@@ -4,8 +4,6 @@
 #include <QInputDialog>
 #include <QDataStream>
 #include <iostream>
-#include "BlockChain.h"
-#include "authentication.h"
 #include <QtMath>
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -16,272 +14,12 @@
 #include <QRegularExpression>
 #include <QStringList>
 #include <algorithm>
+#include "BlockChain.h"
+#include "authentication.h"
+#include "ConsensusMode.h"
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
-
-QMutex databaseMutex;
-double euclideanDistance(int x1, int y1, int x2, int y2) {
-    double distance = qSqrt(qPow((x2 - x1), 2) + qPow((y2 - y1), 2));
-
-    return distance;
-}
-
-/*
-void turnBad(QDataStream& inStream, Client* clients,  int my_index, quint16 senderPort){
-
-    //qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
-    Message receivedMessage;
-    inStream >> receivedMessage.Source_ID.port
-            >> receivedMessage.ID1.port
-            >> receivedMessage.ID2.port>> receivedMessage.ID2.x >> receivedMessage.ID2.y
-            >> receivedMessage.buffer >> receivedMessage.hash_result>> receivedMessage.hops;
-    receivedMessage.is_val =0;
-    if(senderPort == 0)
-    {
-        return;
-    }
-    if (receivedMessage.buffer == QByteArray("8888")) {
-        // byteArray 与 "8888" 相同
-        //qDebug() << "ASDFGHJKL";
-        clients[my_index].is_bad_node = 1;
-    }
-
-}
-*/
-//监测周边节点行为
-void checkAndUpdateTrustValue(QSqlDatabase& db, Client* clients ,int clientCount,int my_index, int port) {
-    //qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-    QString infoTableName = QString("info_%1").arg(port);
-    QString portOutputTableName = QString("output_%1").arg(port);
-    QString portReceiveTableName = QString("receive_%1").arg(port);
-
-    QSqlQuery selectInfoQuery(db);
-    QSqlQuery selectOutputQuery(db);
-    QSqlQuery selectReceiveQuery(db);
-    QSqlQuery updateQuery(db);
-    databaseMutex.lock();
-    // 查询 info 表中的 id 和 trust_value
-    if (!selectInfoQuery.exec(QString("SELECT id, trust_value FROM %1").arg(infoTableName))) {
-        qDebug() << "Error: Failed to fetch data from " << infoTableName << " table:";
-        //db.close();
-        //return;
-    }
-    databaseMutex.unlock();
-    while (selectInfoQuery.next()) {
-        int id = selectInfoQuery.value(0).toInt();
-        float trustValue = selectInfoQuery.value(1).toFloat();
-
-        if(id == clients[my_index].port)
-        {
-            continue;
-        }
-
-        //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-        selectReceiveQuery.prepare(QString("SELECT * FROM %1 WHERE id = :id AND message = :message ").arg(portReceiveTableName));
-        selectReceiveQuery.bindValue(":id", id);
-        QString str = "111111";
-        selectReceiveQuery.bindValue(":message", str.toUtf8());
-        if (!selectReceiveQuery.exec()) {
-            qDebug() << "Error: Failed to fetch data from " << portReceiveTableName << " table:" << selectReceiveQuery.lastError().text();
-            //db.close();
-            //return;
-            //continue;
-        }
-
-        // 如果没有找到匹配项，则将相应的 trust_value 减 1
-        if (selectReceiveQuery.next()) {
-            trustValue -= 1;
-
-            //qDebug() <<id<<"trustValue -= 1 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-            // 更新 info 表中的 trust_value
-            updateQuery.prepare(QString("UPDATE %1 SET trust_value = :trustValue WHERE id = :id").arg(infoTableName));
-            updateQuery.bindValue(":trustValue", trustValue);
-            updateQuery.bindValue(":id", id);
-            databaseMutex.lock();
-            if (!updateQuery.exec()) {
-                qDebug() << "Error: Failed to update data in " << infoTableName << " table:" ;
-                //db.close();
-                //return;
-            }
-            databaseMutex.unlock();
-            //break;
-        }
-
-
-
-    }
-
-
-}
-//非共识节点发送共识数据给共识节点
-void sendTrustData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port,QSqlDatabase& db)
-{
-    if(clients[my_index].is_consensus_node == 0)
-    {
-    QByteArray byteArray;
-    QString portInfoTableName = QString("info_%1").arg(port);
-    QDataStream stream(&byteArray, QIODevice::WriteOnly);
-    QSqlQuery query(db);
-    //Trust_Message temp;
-    if (!db.open()) {
-        qDebug() << "Error: Failed to open database connection";
-        return;
-    }
-    stream <<1;
-
-    if (!query.exec(QString("SELECT * FROM %1").arg(portInfoTableName))) {
-        qDebug() << "Error: Failed to fetch data from " << portInfoTableName << " table:" ;
-        //db.close();
-        return;
-    } else {
-        //qDebug() << "Data from " << portInfoTableName << " table:";
-        while (query.next()) {
-            int id = query.value(0).toInt();
-            float trustValue = query.value(1).toFloat();
-            //int blockDepth = query.value(2).toInt();
-            stream <<id<<trustValue;
-
-            //qDebug() << "ID:" << id << ", trustValue:" <<trustValue<<",blockDepth"<<blockDepth;
-        }
-    }
-//    int flag =0;//判断有几个共识节点
-    for (int i = 0; i < clientCount; i++) {
-        if (clients[i].port == port) {
-            continue;
-        }
-        if(euclideanDistance(clients[my_index].x,clients[my_index].y,clients[i].x,clients[i].y)>2)
-        {
-            continue;
-        }
-        //qDebug() << "send message";
-        if(clients[i].is_out_node == 1)
-        {
-            continue;
-        }
-        if(clients[i].is_consensus_node == 1)
-        {
-
-            udpSocket.writeDatagram(byteArray, clients[i].address, clients[i].port);
-            //qDebug() << "send message";
-        }
-    }
-//    if(flag == 0)
-//    {
-//        //qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-//        updateInfoTableFromBlockchain(my_index,db,clients,clientCount,port);
-//    }
-    }
-
-}
-
-//共识节点间相互发送共识数据
-void gongshi(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port,QSqlDatabase& db)
-{
-    //qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-    if(clients[my_index].is_consensus_node == 1)
-    {
-    QByteArray byteArray;
-    QString portInfoTableName = QString("info_%1").arg(port);
-    QDataStream stream(&byteArray, QIODevice::WriteOnly);
-    QSqlQuery query(db);
-    //Trust_Message temp;
-    if (!db.open()) {
-        qDebug() << "Error: Failed to open database connection";
-        return;
-    }
-    stream <<1;
-
-    if (!query.exec(QString("SELECT * FROM %1").arg(portInfoTableName))) {
-        qDebug() << "Error: Failed to fetch data from " << portInfoTableName << " table:" ;
-        //db.close();
-        return;
-    } else {
-        //qDebug() << "Data from " << portInfoTableName << " table:";
-        while (query.next()) {
-            int id = query.value(0).toInt();
-            float trustValue = query.value(1).toFloat();
-            //int blockDepth = query.value(2).toInt();
-            stream <<id<<trustValue;
-
-            //qDebug() << "ID:" << id << ", trustValue:" <<trustValue<<",blockDepth"<<blockDepth;
-        }
-    }
-    int flag =0;//判断有几个共识节点
-    for (int i = 0; i < clientCount; i++) {
-
-        if(euclideanDistance(clients[my_index].x,clients[my_index].y,clients[i].x,clients[i].y)>2)
-        {
-            continue;
-        }
-        //qDebug() << "send message";
-        if(clients[i].is_out_node == 1)
-        {
-            continue;
-        }
-        if(clients[i].is_consensus_node == 1 )
-        {
-            if(i!=my_index)
-            {
-                flag =1;
-            }
-
-            udpSocket.writeDatagram(byteArray, clients[i].address, clients[i].port);
-            //qDebug() << "send message";
-        }
-    }
-    if(flag == 0)
-    {
-        QDataStream empty;
-        //qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-        //(empty,udpSocket,clients,clientCount,my_index,port,db);
-    }
-    }
-
-}
-
-//共识节点将共识数据发送给非共识节点
-void consensusData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port, QSqlDatabase& db) {
-    QString portInfoTableName = QString("info_%1").arg(port);
-    if (clients[my_index].is_consensus_node == 1 ) {
-        QSqlQuery query(db);
-        if (!query.exec(QString("SELECT * FROM %1").arg(portInfoTableName))) {
-            qDebug() << "Error: Failed to fetch data from " << portInfoTableName << " table:" ;
-            //db.close();
-            return;
-        } else {
-            QByteArray byteArray;
-            QDataStream stream(&byteArray, QIODevice::WriteOnly);
-
-            // 将数据添加到数据流中
-            stream << 1; // 标记为共识数据
-
-            while (query.next()) {
-                int id = query.value(0).toInt();
-                float trustValue = query.value(1).toFloat();
-                //int blockDepth = query.value(2).toInt();
-
-                // 将数据写入数据流
-                stream << id << trustValue ;
-            }
-        for (int i = 0; i < clientCount; i++)
-        {
-            if(clients[i].is_out_node == 1)
-            {
-                continue;
-            }
-            if(clients[i].is_consensus_node != 1)
-            {
-                udpSocket.writeDatagram(byteArray, clients[i].address, clients[i].port);
-            }
-
-        }
-    }
-
-    //qDebug() << "ID:" << port << "发送共识数据";
-    }
-}
 
 // 全局互斥锁，用于同步数据库访问
 
@@ -558,6 +296,7 @@ void updateTrustValuesFromStream(QSqlDatabase& db, const QString& portInfoTableN
     }
     db.commit();
 }
+
 //处理工作数据
 void processDataAndForward(QDataStream& inStream,QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port, QSqlDatabase& db, quint16 senderPort) {
     // ... 上述代码
@@ -735,6 +474,7 @@ void tongbu( Client* clients, int& my_index, int port, QSqlDatabase& db) {
         }
         db.commit();
 }
+
 void updateInfoTableFromBlockchain(QDataStream &inStream,int my_index,QSqlDatabase& db, Client* clients, int clientCount, int port) {
     QString portOutputTableName = QString("output_%1").arg(port);
     QString portReceiveTableName = QString("receive_%1").arg(port);
@@ -824,7 +564,8 @@ void updateInfoTableFromBlockchain(QDataStream &inStream,int my_index,QSqlDataba
     }
     //db.close();
 }
-//变坏
+
+//设置变坏
 void turnBad(QDataStream& inStream, Client* clients,  int my_index, quint16 senderPort){
 
     //qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
@@ -845,6 +586,7 @@ void turnBad(QDataStream& inStream, Client* clients,  int my_index, quint16 send
     }
 
 }
+
 
 void update_exit_client(QDataStream& inStream, Client* clients, int clientCount, quint16 senderPort){
 
@@ -871,7 +613,7 @@ void update_exit_client(QDataStream& inStream, Client* clients, int clientCount,
 
 }
 
-
+//选出下轮的共识节点
 void update_consensus_node(QDataStream &inStream,QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port, QSqlDatabase& db,int consensus_num,int senderPort){
 
     //qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
@@ -920,6 +662,8 @@ void update_consensus_node(QDataStream &inStream,QUdpSocket& udpSocket, Client* 
     databaseMutex.unlock();
     db.commit();
 }
+
+//（核心)处理信息
 void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port,QSqlDatabase& db) {
     while (udpSocket.hasPendingDatagrams())
     {
@@ -990,7 +734,7 @@ void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my
 
 }
 
-
+//发送数据
 void sendData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port,QSqlDatabase& db) {
     Message temp;
     if (!db.open()) {
@@ -1009,9 +753,6 @@ void sendData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_in
     {
         temp.buffer = "12345";
     }
-
-
-
     temp.hops=0;
     temp.hash_result = hashByteArray(temp.buffer, QCryptographicHash::Sha256);
     QByteArray byteArray;
@@ -1051,26 +792,7 @@ void sendData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_in
     }
     query.finish();
     db.commit();
-    //查寻
-//        if (!query.exec(QString("SELECT * FROM %1").arg(portReceiveTableName))) {
-//                qDebug() << "Error: Failed to fetch data from " << portReceiveTableName << " table:" ;
-//                db.close();
-//                return;
-//            } else {
-//                qDebug() << "Data from " << portReceiveTableName << " table:";
-//                while (query.next()) {
-//                    int id = query.value(0).toInt();
-//                    QString message = query.value(1).toString();
-//                    QString hash = query.value(2).toString();
-
-
-//                    qDebug() << "ID:" << id << ", message:" <<message<<",hash"<<hash;
-//                }
-//            }
-
 }
-//修改
-
 
 //创世块建立
 void createBlockChainTable(QSqlDatabase& db, int port,QList<int> intList)
@@ -1218,167 +940,6 @@ void createBlockChainTable(QSqlDatabase& db, int port,QList<int> intList)
             db.commit();
 
 }
-
-//创世块建立
-
-
-//void createBlockChainTable(QSqlDatabase& db, int port,QList<int> intList)
-//{
-//    // Open SQLite database
-
-
-//    // Create BlockChain table
-//    QSqlQuery query(db);
-//    QString database =  QString("blockchain_%1").arg(port);
-//    if (!query.exec(QString("DROP TABLE IF EXISTS %1").arg(database))) {
-//            qDebug() << "Error: Failed to drop BlockChain table:";
-//            //db.close();
-//            return;
-//        } else {
-//            // qDebug() << "BlockChain table dropped successfully!";
-//        }
-//    if (!query.exec(QString("CREATE TABLE IF NOT EXISTS %1("
-//                                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-//                                 "trust_value FLOAT, "
-//                                 "block_depth INTEGER, "
-//                                 "is_consensus_node INTEGER,"
-//                                 "is_bad_node INTEGER,"
-//                                 "x INTEGER,"
-//                                 "y INTEGER)").arg(database))) {
-//            qDebug() << "Error: Failed to create BlockChain table:";
-//            //db.close();
-//            return;
-//        } else {
-//           // qDebug() << "BlockChain table created successfully!";
-//        }
-//    // Close the database connection
-//    QString insertQuery = QString("INSERT INTO %1 (id, trust_value, block_depth, is_consensus_node, is_bad_node, x, y) "
-//                                      "VALUES (:id, :trust_value, :block_depth, :is_consensus_node, :is_bad_node, :x, :y)").arg(database);
-//        // Example data to be inserted
-//        query.prepare(insertQuery);
-//    Point p[10];
-//    p[0].x = 1;
-//    p[0].y = 1;
-
-//    p[1].x = 3;
-//    p[1].y = 1;
-
-//    p[2].x = 2;
-//    p[2].y = 2;
-
-//    p[3].x = 2;
-//    p[3].y = 3;
-
-//    p[4].x = 3;
-//    p[4].y = 3;
-//    int clientCount = 5;
-//    for (int i = 0, host = 8080; i < clientCount; i++, host++) {
-//        query.bindValue(":id", host);
-//        query.bindValue(":trust_value", 10); // Example trust value
-//        query.bindValue(":block_depth", 0); // Example block depth
-//        query.bindValue(":is_consensus_node", 0.0); // Example is consensus node
-//        query.bindValue(":is_bad_node", 0);
-//        query.bindValue(":x", p[i].x); // X value from clients array
-//        query.bindValue(":y", p[i].y); // Y value from clients array
-//        databaseMutex.lock();
-//        query.exec();
-//        query.finish();
-//        databaseMutex.unlock();
-//        // Execute the query
-////        if (!query.exec()) {
-////            qDebug() << "Error: Failed to insert data into BlockChain table:" ;
-////        } else {
-////            qDebug() << "Data inserted successfully into BlockChain table!";
-////        }
-//    }
-
-
-//       // Prepare the query
-//        //设置共识节点
-//    QString updateQuery = QString("UPDATE %1 SET "
-//                              "is_consensus_node = :is_consensus_node WHERE id = :id").arg(database);
-
-//        // 准备查询
-//        query.prepare(updateQuery);
-
-//        // 绑定值到占位符
-//        query.bindValue(":id", 8082);
-
-//        query.bindValue(":is_consensus_node", 1);
-
-//        // 执行更新
-//        databaseMutex.lock();
-//        if (!query.exec()) {
-//            qDebug() << "错误：无法在 BlockChain 表中更新数据：" ;
-//        }
-//        query.finish();
-//        databaseMutex.unlock();
-
-//        //设置共识节点
-//    updateQuery = QString("UPDATE %1 SET "
-//                              "is_consensus_node = :is_consensus_node WHERE id = :id").arg(database);
-
-//        // 准备查询
-//        query.prepare(updateQuery);
-
-//        // 绑定值到占位符
-//        query.bindValue(":id", 8084);
-
-//        query.bindValue(":is_consensus_node", 1);
-
-//        // 执行更新
-//        databaseMutex.lock();
-//        if (!query.exec()) {
-//            qDebug() << "错误：无法在 BlockChain 表中更新数据：" ;
-//        }
-//        query.finish();
-//        databaseMutex.unlock();
-
-//        //设置坏节点
-//        updateQuery = QString("UPDATE %1 SET "
-//                                  "is_bad_node = :is_bad_node WHERE id = :id").arg(database);
-
-//            // 准备查询
-//            query.prepare(updateQuery);
-
-//            // 绑定值到占位符
-//            query.bindValue(":id", 8081);
-
-//            query.bindValue(":is_bad_node", 1);
-
-//            // 执行更新
-//            databaseMutex.lock();
-//            if (!query.exec()) {
-//                qDebug() << "错误：无法在 BlockChain 表中更新数据：" ;
-//            }
-//            query.finish();
-//            databaseMutex.unlock();
-
-//        //查寻
-//            if (!query.exec(QString("SELECT * FROM %1").arg(database))) {
-//                qDebug() << "Error: Failed to fetch data from " << database << " table:" ;
-//                // db.close();
-//                return;
-//            } else {
-//                qDebug() << "Data from " << database << " table:";
-//                while (query.next()) {
-//                    int id = query.value(0).toInt();
-//                    float trust_value = query.value(1).toFloat();
-//                    int block_depth = query.value(2).toInt();
-//                    int is_consensus_node = query.value(3).toInt();
-//                    int is_bad_node = query.value(4).toInt();
-//                    int x = query.value(5).toInt();
-//                    int y = query.value(6).toInt();
-
-//                    qDebug() << "ID:" << id << ", Trust Value:" << trust_value << ", Block Depth:" << block_depth
-//                             << ", Is Consensus Node:" << is_consensus_node << ", Is BAD Node:" << is_bad_node << ", X:" << x << ", Y:" << y;
-//                }
-//            }
-//            db.commit();
-
-//}
-
-
 
 void createOrClearTableForPort(QSqlDatabase& db,int port) {//num几个
 
