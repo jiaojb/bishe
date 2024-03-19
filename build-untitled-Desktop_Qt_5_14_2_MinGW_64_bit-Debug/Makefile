@@ -116,6 +116,8 @@ Makefile: ../untitled/untitled.pro C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/win3
 		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_bluetooth.pri \
 		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_bluetooth_private.pri \
 		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_bootstrap_private.pri \
+		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_charts.pri \
+		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_charts_private.pri \
 		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_concurrent.pri \
 		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_concurrent_private.pri \
 		C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_core.pri \
@@ -301,6 +303,8 @@ C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_axserver_private.pri:
 C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_bluetooth.pri:
 C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_bluetooth_private.pri:
 C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_bootstrap_private.pri:
+C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_charts.pri:
+C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_charts_private.pri:
 C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_concurrent.pri:
 C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_concurrent_private.pri:
 C:/Qt/Qt5.14.2/5.14.2/mingw73_64/mkspecs/modules/qt_lib_core.pri:

@@ -16,7 +16,9 @@
 #include <QStringList>
 #include <algorithm>
 #include <gongshi.cpp>
-//#include <openssl/ecdsa.h>
+#include <openssl/ec.h>
+#include <openssl/ecdsa.h>
+#include <openssl/obj_mac.h>
 
 
 // 全局互斥锁，用于同步数据库访问
