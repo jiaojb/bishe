@@ -26,5 +26,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     BlockChain.h \
+    CommunicateMode.h \
     ConsensusMode.h \
+    ProcessDataMode.h \
     authentication.h

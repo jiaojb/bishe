@@ -20,13 +20,8 @@
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
-
-QMutex databaseMutex;
-double euclideanDistance(int x1, int y1, int x2, int y2) {
-    double distance = qSqrt(qPow((x2 - x1), 2) + qPow((y2 - y1), 2));
-
-    return distance;
-}
+#include "CommunicateMode.h"
+#include "ProcessDataMode.h"
 
 //监测周边节点行为
 void checkAndUpdateTrustValue(QSqlDatabase& db, Client* clients ,int clientCount,int my_index, int port) {
