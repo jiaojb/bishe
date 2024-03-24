@@ -12,6 +12,7 @@
 #include <QSqlError>
 #include <QCryptographicHash>
 #include <QMutex>
+#include <QProcess>
 #include "BlockChain.h"
 QByteArray hashByteArray(const QByteArray& data, QCryptographicHash::Algorithm hashAlgorithm = QCryptographicHash::Md5) {
     // 创建哈希对象
@@ -42,9 +43,9 @@ void sendData(QUdpSocket& udpSocket) {
     QDataStream stream(&byteArray, QIODevice::WriteOnly);
 
     stream <<temp.is_val<< temp.Source_ID.port
-           << temp.ID1.port
-           << temp.ID2.port<< temp.ID2.x << temp.ID2.y
-           << temp.buffer<<temp.hash_result<<temp.hops;
+          << temp.ID1.port
+          << temp.ID2.port<< temp.ID2.x << temp.ID2.y
+          << temp.buffer<<temp.hash_result<<temp.hops;
 
     udpSocket.writeDatagram(byteArray, QHostAddress("127.0.0.1"), 8081);
 }
@@ -61,7 +62,7 @@ void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my
         QDataStream inStream(&buffer, QIODevice::ReadOnly);
         QSqlQuery query(db);
         if(senderPort == 0)
-           {
+        {
             continue;
         }
 
@@ -80,13 +81,13 @@ void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my
         }
         else if(is_trust == 2)//为变坏信息
         {
-           //turnBad(inStream, clients, my_index,  senderPort);
-           // qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
+            //turnBad(inStream, clients, my_index,  senderPort);
+            // qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
 
         }
         else if(is_trust == 3)//为更新client信息（已启动）
         {
-           // qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+            // qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
             //update_exit_client(inStream, clients, clientCount,senderPort);
             inStream >> receivedMessage.Source_ID.port
                     >> receivedMessage.ID1.port
@@ -102,7 +103,7 @@ void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my
             int max_port[20];
             inStream>> max_port[0]
                     >> max_port[1];
-           // qDebug() << "XXXXXXXXXXXmax_port[0]:"<<max_port[0]<<"XXXXXXXXXXXXXXmax_port[1]:"<<max_port[1];
+            // qDebug() << "XXXXXXXXXXXmax_port[0]:"<<max_port[0]<<"XXXXXXXXXXXXXXmax_port[1]:"<<max_port[1];
             if(senderPort == 0)
             {
                 return;
@@ -120,12 +121,12 @@ void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my
         else//共识信息
         {
 
-                    while (!inStream.atEnd()) {
-                        int id;
-                        float trust_value;
-                        inStream >> id >> trust_value;
-                        qDebug() << "ID:" << id << ", trustValue:" <<trust_value;
-                    }
+            while (!inStream.atEnd()) {
+                int id;
+                float trust_value;
+                inStream >> id >> trust_value;
+                qDebug() << "ID:" << id << ", trustValue:" <<trust_value;
+            }
 
 
 
@@ -163,9 +164,10 @@ int main(int argc, char *argv[])
     QUdpSocket udpSocket;
     // 绑定到本地端口
     int port;
-//    qDebug() << "Enter a port: ";
-//    std::cin >> port;
+    //    qDebug() << "Enter a port: ";
+    //    std::cin >> port;
     port = 1234;
+
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
     QString database = QString("BlockChain_%1.db").arg(port);
     db.setDatabaseName(database);
@@ -177,8 +179,45 @@ int main(int argc, char *argv[])
         //qDebug() << "Database opened successfully!";
     }
     udpSocket.bind(QHostAddress::AnyIPv4, static_cast<quint16>(port));
+
+
+
+
+    // 设置外部可执行程序的路径
+    QString program = "C:/bishe/bishe/build-untitled-Desktop_Qt_5_14_2_MinGW_64_bit-Debug/debug/untitled.exe";
+
+    // 设置外部程序的共同参数
+    QStringList commonArguments;
+    commonArguments << "1234" << "8080" << "8080, 8081, 8082, 8083";
+
+    // 循环执行外部可执行程序
+    for (int i = 0; i < 4; ++i) {
+        // 创建参数列表
+        QStringList arguments = commonArguments;
+        arguments[1] = QString::number(uav[i]); // 使用数组中的端口号
+
+        // 启动外部可执行程序，使其在执行时可视
+        QProcess *process = new QProcess();
+        process->start(program, arguments);
+        process->waitForStarted(); // 等待程序启动
+
+        if (process->state() == QProcess::Running) {
+            qDebug() << "External program started successfully.";
+        } else {
+            qDebug() << "Failed to start external program.";
+            return 1;
+        }
+    }
+
+
+
+
+
+
+
+
     // 暂停程序执行 5 秒钟
-    //QThread::sleep(5);
+    QThread::sleep(10);
     sendData(udpSocket);
     qDebug() << "send message";
     QObject::connect(&udpSocket, &QUdpSocket::readyRead, [&]() {
