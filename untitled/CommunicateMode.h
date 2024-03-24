@@ -277,14 +277,26 @@ void send_new_consensus_data(QDataStream &inStream,QUdpSocket& udpSocket, Client
        i++;
     }
 
-    qDebug() << "max_port[i]" << max_port[0] << ", max_port[i]" <<max_port[1];
+    //qDebug() << "max_port[i]" << max_port[0] << ", max_port[i]" <<max_port[1];
+    for(int j=0;j<consensus_num;j++)
+    {
+
+         qDebug() << "max_port["<<j+1<<"]:"<<max_port[j];
+    }
+
     for(int i =0;i<clientCount;i++)
     {
         clients[i].is_consensus_node =0;
-        if(clients[i].port == temp[0].port || clients[i].port == temp[1].port)
+//        if(clients[i].port == temp[0].port || clients[i].port == temp[1].port)
+//        {
+//            clients[i].is_consensus_node =1;
+//        }
+        for(int j=0;j<consensus_num;j++)
         {
-            clients[i].is_consensus_node =1;
+            if(clients[i].is_consensus_node==max_port[j])
+                clients[i].is_consensus_node =1;
         }
+
     }
 
     QString blockchainTableName = QString("blockchain_%1").arg(port);
@@ -319,8 +331,14 @@ void send_new_consensus_data(QDataStream &inStream,QUdpSocket& udpSocket, Client
     db.commit();
     QByteArray byteArray;
     QDataStream stream(&byteArray, QIODevice::WriteOnly);
-    stream <<4<< max_port[0]
-               <<max_port[1];
+//    stream <<4<< max_port[0]
+//               <<max_port[1];
+    stream<<4;
+    for(int j=0;j<consensus_num;j++)
+    {
+
+        stream<<max_port[j];
+    }
     //修改XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     for (int i = 0; i < clientCount; i++) {
             if (clients[i].port == port) {

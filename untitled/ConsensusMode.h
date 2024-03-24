@@ -109,7 +109,8 @@ void sendTrustData(QUdpSocket& udpSocket, Client* clients, int clientCount, int 
         qDebug() << "Error: Failed to fetch data from " << portInfoTableName << " table:" ;
         //db.close();
         return;
-    } else {
+    }
+    else {
         //qDebug() << "Data from " << portInfoTableName << " table:";
         while (query.next()) {
             int id = query.value(0).toInt();
@@ -120,7 +121,7 @@ void sendTrustData(QUdpSocket& udpSocket, Client* clients, int clientCount, int 
             //qDebug() << "ID:" << id << ", trustValue:" <<trustValue<<",blockDepth"<<blockDepth;
         }
     }
-//    int flag =0;//判断有几个共识节点
+    //判断有几个共识节点
     for (int i = 0; i < clientCount; i++) {
         if (clients[i].port == port) {
             continue;
@@ -209,7 +210,7 @@ void gongshi(QUdpSocket& udpSocket, Client* clients, int clientCount, int my_ind
     {
         QDataStream empty;
         //qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-        //(empty,udpSocket,clients,clientCount,my_index,port,db);
+
     }
     }
 

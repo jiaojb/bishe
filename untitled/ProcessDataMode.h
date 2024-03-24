@@ -126,7 +126,7 @@ void updateConsensusData(QDataStream &inStream,QUdpSocket& udpSocket, Client* cl
     }
     db.commit();
 
-    send_new_consensus_data(inStream,udpSocket, clients, clientCount, my_index,  port,  db,2);//TODO
+    send_new_consensus_data(inStream,udpSocket, clients, clientCount, my_index,  port,  db,3);//TODO
 
 }
 
@@ -373,10 +373,19 @@ void update_client(QUdpSocket& udpSocket, Client* clients,int my_index,int port,
 void update_consensus_node(QDataStream &inStream,QUdpSocket& udpSocket, Client* clients, int clientCount, int my_index, int port, QSqlDatabase& db,int consensus_num,int senderPort){
 
     //qDebug() << "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
+    //int StrongPort;
     int max_port[20];
-    inStream>> max_port[0]
-            >> max_port[1];
-    qDebug() << "XXXXXXXXXXXmax_port[0]:"<<max_port[0]<<"XXXXXXXXXXXXXXmax_port[1]:"<<max_port[1];
+    for(int j=0;j<consensus_num;j++)
+    {
+        inStream>> max_port[j];
+
+    }
+    for(int j=0;j<consensus_num;j++)
+    {
+
+         qDebug() << "max_port["<<j+1<<"]:"<<max_port[j]<<"     ";
+    }
+
     if(senderPort == 0)
     {
         return;
@@ -384,9 +393,14 @@ void update_consensus_node(QDataStream &inStream,QUdpSocket& udpSocket, Client* 
     for(int i =0;i<clientCount;i++)
     {
         clients[i].is_consensus_node =0;
-        if(clients[i].port == max_port[0] || clients[i].port == max_port[1])
+//        if(clients[i].port == max_port[0] || clients[i].port == max_port[1])
+//        {
+//            clients[i].is_consensus_node =1;
+//        }
+        for(int j=0;j<consensus_num;j++)
         {
-            clients[i].is_consensus_node =1;
+            if(clients[i].is_consensus_node==max_port[j])
+                clients[i].is_consensus_node =1;
         }
     }
     QString blockchainTableName = QString("blockchain_%1").arg(port);
@@ -482,7 +496,7 @@ void processData(QUdpSocket& udpSocket, Client* clients, int clientCount, int my
         else if(is_trust == 4)//为更新共识节点信息
         {
             qDebug() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-            update_consensus_node(inStream,udpSocket, clients, clientCount, my_index,  port,  db,2,senderPort);
+            update_consensus_node(inStream,udpSocket, clients, clientCount, my_index,  port,  db,3,senderPort);
         }
         else//共识信息
         {

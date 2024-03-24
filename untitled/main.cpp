@@ -69,7 +69,7 @@ void createBlockChainTable(QSqlDatabase& db, int port,QList<int> intList,int Con
     for (int i = 0; i < clientCount; i++) {
 
         query.bindValue(":id", intList[i]);
-        query.bindValue(":trust_value", 10); // Example trust value
+        query.bindValue(":trust_value", 10+i); // Example trust value
         query.bindValue(":block_depth", 0); // Example block depth
         query.bindValue(":is_consensus_node", 0); // Example is consensus node
         query.bindValue(":is_bad_node", 0);
@@ -393,7 +393,8 @@ int main(int argc, char *argv[]) {
             qDebug() << "Error: Failed to fetch data from BlockChain table:" << query.lastError().text();
           //  db.close();
 
-        } else {
+        }
+    else {
            // qDebug() << "Data from BlockChain table:";
             while (query.next()) {
                 int id = query.value(0).toInt();
@@ -498,7 +499,7 @@ int main(int argc, char *argv[]) {
      QObject::connect(&sendTimer_trust_consensus, &QTimer::timeout, [&]() {
              consensusData(udpSocket, clients, clientCount, my_index, port,db);
          });
-        //提出blockchain信息，更新info_和clients信息
+     //提取blockchain信息，更新info_和clients信息
      QObject::connect(&sendTimer_tongbu, &QTimer::timeout, [&]() {
              tongbu( clients, my_index, port,db);
          });
