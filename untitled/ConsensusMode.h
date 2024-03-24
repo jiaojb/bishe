@@ -17,9 +17,9 @@
 #include <QRegularExpression>
 #include <QStringList>
 #include <algorithm>
-#include <openssl/ec.h>
-#include <openssl/ecdsa.h>
-#include <openssl/obj_mac.h>
+//#include <openssl/ec.h>
+//#include <openssl/ecdsa.h>
+//#include <openssl/obj_mac.h>
 #include "CommunicateMode.h"
 #include "ProcessDataMode.h"
 

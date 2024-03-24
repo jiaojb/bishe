@@ -260,6 +260,7 @@ void send_new_consensus_data(QDataStream &inStream,QUdpSocket& udpSocket, Client
            //qDebug() << "ID:" << id << ", trustValue:" <<trustValue<<",blockDepth"<<blockDepth;
         }
     }
+    //对共识后的信任值进行排序
     std::sort(temp, temp + 20, compareTrust);
     int max_port[20];
     int i=0;
@@ -277,13 +278,13 @@ void send_new_consensus_data(QDataStream &inStream,QUdpSocket& udpSocket, Client
        i++;
     }
 
-    //qDebug() << "max_port[i]" << max_port[0] << ", max_port[i]" <<max_port[1];
+//*************************************************测试******************************************************************
     for(int j=0;j<consensus_num;j++)
     {
 
          qDebug() << "max_port["<<j+1<<"]:"<<max_port[j];
     }
-
+    //*********************************************修改*******************************************************************
     for(int i =0;i<clientCount;i++)
     {
         clients[i].is_consensus_node =0;
@@ -293,7 +294,7 @@ void send_new_consensus_data(QDataStream &inStream,QUdpSocket& udpSocket, Client
 //        }
         for(int j=0;j<consensus_num;j++)
         {
-            if(clients[i].is_consensus_node==max_port[j])
+            if(clients[i].port==max_port[j])
                 clients[i].is_consensus_node =1;
         }
 
@@ -310,7 +311,6 @@ void send_new_consensus_data(QDataStream &inStream,QUdpSocket& udpSocket, Client
         return;
     }
     updateQuery.finish();
-    //databaseMutex.unlock();
 
     for(int i = 0;i<consensus_num;i++)
     {

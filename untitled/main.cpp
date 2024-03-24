@@ -19,9 +19,9 @@
 #include "ConsensusMode.h"
 #include "CommunicateMode.h"
 #include "ProcessDataMode.h"
-#include <openssl/ec.h>
-#include <openssl/ecdsa.h>
-#include <openssl/obj_mac.h>
+//#include <openssl/ec.h>
+//#include <openssl/ecdsa.h>
+//#include <openssl/obj_mac.h>
 
 
 //创世块建立
@@ -69,7 +69,9 @@ void createBlockChainTable(QSqlDatabase& db, int port,QList<int> intList,int Con
     for (int i = 0; i < clientCount; i++) {
 
         query.bindValue(":id", intList[i]);
-        query.bindValue(":trust_value", 10+i); // Example trust value
+        //query.bindValue(":trust_value", 10); // Example trust value
+        //test
+        query.bindValue(":trust_value", 10); // Example trust value
         query.bindValue(":block_depth", 0); // Example block depth
         query.bindValue(":is_consensus_node", 0); // Example is consensus node
         query.bindValue(":is_bad_node", 0);
@@ -369,7 +371,7 @@ int main(int argc, char *argv[]) {
 
         // 输出转换后的整数列表
        // qDebug() << "转换后的整数列表：" << intList;
-    int Consensus_Num=3;
+    int Consensus_Num=2;
     createBlockChainTable(db,port,intList,Consensus_Num);//设置创世块
 
         // Create QSqlQuery instance
@@ -439,16 +441,16 @@ int main(int argc, char *argv[]) {
 
     //焦建博test
     // 初始化 OpenSSL 库
-    initOpenSSL();
+//   initOpenSSL();
 
-    // 生成承诺
-    Commitment commitment = generateCommitment();
+//    // 生成承诺
+//    Commitment commitment = generateCommitment();
 
-    // 输出承诺信息
-    qDebug() << "Generated commitment:" << commitment.point;
+//    // 输出承诺信息
+//    qDebug() << "Generated commitment:" << commitment.point;
 
-    // 释放 OpenSSL 库
-    cleanupOpenSSL();
+//    // 释放 OpenSSL 库
+//    cleanupOpenSSL();
     //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     createOrClearTableForPort(db,port);//设置自身数据库
    // changetable(db,port);
@@ -492,7 +494,7 @@ int main(int argc, char *argv[]) {
      });
     //处理接收到的数据
      QObject::connect(&udpSocket, &QUdpSocket::readyRead, [&]() {
-             processData(udpSocket, clients, clientCount, my_index, port,db);
+             processData(udpSocket, clients, clientCount, my_index, port,db,Consensus_Num);
          });
 
     //共识节点将共识数据发送给非共识节点

@@ -17,8 +17,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp
 
-INCLUDEPATH += $$quote(C:/Program Files/OpenSSL-Win64/include)
-LIBS += -L$$quote(C:/Program Files/OpenSSL-Win64/lib) -llibcrypto
+#INCLUDEPATH += $$quote(C:/Program Files/OpenSSL-Win64/include)
+#LIBS += -L$$quote(C:/Program Files/OpenSSL-Win64/lib) -llibcrypto
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
